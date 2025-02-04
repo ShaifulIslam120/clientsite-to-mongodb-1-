@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -18,14 +18,49 @@ const client = new MongoClient(uri, {
   }
 });
 
-let UsersCollection; // Declare globally
-
 async function run() {
   try {
     await client.connect();
     const database = client.db("usersDB");
-    UsersCollection = database.collection("users"); // ✅ Assign to the global variable
+    const UsersCollection = database.collection("users");
     console.log("Connected to MongoDB!");
+
+    app.get('/', (req, res) => {
+      res.send('simple CRUD is running');
+    });
+
+    // Retrieve data from MongoDB
+    app.get('/users', async (req, res) => {
+      const cursor = UsersCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    // Send data to the server
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      console.log('New user:', user);
+      const result = await UsersCollection.insertOne(user);
+      res.send(result);
+    });
+
+    // Delete operation
+    app.delete('/users/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log('Deleting from database:', id);
+      const query = { _id: new ObjectId (id) };
+      const result=await UsersCollection.deleteOne(query)
+      res.send(result)
+
+
+      // try {
+      //   const result = await UsersCollection.deleteOne({ _id: new ObjectId(id) });
+      //   res.send(result);
+      // } catch (error) {
+      //   res.status(500).send({ error: 'Error deleting user' });
+      // }
+    });
+
   } catch (error) {
     console.error("MongoDB connection error:", error);
   }
@@ -33,23 +68,6 @@ async function run() {
 
 run();
 
-app.get('/', (req, res) => {
-  res.send('simple curd is running');
-});
-
-app.post('/users', async (req, res) => {
-  const user = req.body;
-  console.log('new user', user);
-  const result = await UsersCollection.insertOne(user);
-  res.send(result);
-  if(data.insertedId){
-    alert('user add successfully')
-    form.reset;
-  }
-
-  
-});
-
 app.listen(port, () => {
-  console.log(`Simple curd is running on port: ${port}`);
+  console.log(`Simple CRUD is running on port: ${port}`);
 });
