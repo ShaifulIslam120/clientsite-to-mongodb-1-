@@ -5,9 +5,11 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
+// MongoDB Connection
 const uri = "mongodb+srv://bappy:Amihscdimo@cluster0.uxwhh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
 const client = new MongoClient(uri, {
@@ -23,20 +25,29 @@ async function run() {
     await client.connect();
     const database = client.db("usersDB");
     const UsersCollection = database.collection("users");
+
     console.log("Connected to MongoDB!");
 
+    // Root route
     app.get('/', (req, res) => {
-      res.send('simple CRUD is running');
+      res.send('Simple CRUD is running');
     });
 
-    // Retrieve data from MongoDB
+    // Get all users
     app.get('/users', async (req, res) => {
-      const cursor = UsersCollection.find();
-      const result = await cursor.toArray();
+      const result = await UsersCollection.find().toArray();
       res.send(result);
     });
 
-    // Send data to the server
+    // Get a single user by ID
+    app.get('/users/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const user = await UsersCollection.findOne(query);
+      res.send(user);
+    });
+
+    // Add a new user
     app.post('/users', async (req, res) => {
       const user = req.body;
       console.log('New user:', user);
@@ -44,21 +55,33 @@ async function run() {
       res.send(result);
     });
 
-    // Delete operation
+    // Update a user
+    app.put('/users/:id', async (req, res) => {
+      const id = req.params.id;
+      const updateuser = req.body; // Corrected variable name
+      console.log('Updating user:', id, updateuser);
+
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const update = {
+        $set: {
+          name: updateuser.name,
+          email: updateuser.email
+        }
+      };
+
+      const result = await UsersCollection.updateOne(filter, update, options);
+      res.send(result);
+    });
+
+    // Delete a user
     app.delete('/users/:id', async (req, res) => {
       const id = req.params.id;
       console.log('Deleting from database:', id);
-      const query = { _id: new ObjectId (id) };
-      const result=await UsersCollection.deleteOne(query)
-      res.send(result)
 
-
-      // try {
-      //   const result = await UsersCollection.deleteOne({ _id: new ObjectId(id) });
-      //   res.send(result);
-      // } catch (error) {
-      //   res.status(500).send({ error: 'Error deleting user' });
-      // }
+      const query = { _id: new ObjectId(id) };
+      const result = await UsersCollection.deleteOne(query);
+      res.send(result);
     });
 
   } catch (error) {
@@ -68,6 +91,7 @@ async function run() {
 
 run();
 
+// Start server
 app.listen(port, () => {
   console.log(`Simple CRUD is running on port: ${port}`);
 });
